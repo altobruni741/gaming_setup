@@ -1,0 +1,57 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+def webBuildDirectory = rootProject.projectDir.parentFile.toPath().resolve('dist').toFile()
+def packagedWebDirectory = layout.projectDirectory.dir('src/main/assets/public')
+
+tasks.register('verifyWebBuild') {
+    doLast {
+        if (!new File(webBuildDirectory, 'index.html').isFile()) {
+            throw new GradleException('Web build not found. From the repository root run: npm ci && npm run build -- --base=./')
+        }
+    }
+}
+
+tasks.register('syncWebAssets', Sync) {
+    from(webBuildDirectory)
+    into(packagedWebDirectory)
+    dependsOn tasks.named('verifyWebBuild')
+}
+
+tasks.named('preBuild').configure {
+    dependsOn tasks.named('syncWebAssets')
+}
+
+android {
+    namespace 'fr.lisiere.game'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'fr.lisiere.game'
+        minSdk 23
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.17.1'
+}
